@@ -83,7 +83,7 @@ pip install -r requirements.txt
 ### **Step 5: Setup Google Cloud Authentication (ADC)**
 
 ```bash
-# Install gcloud CLI if not already installed
+# Install gcloud CLI if not already installed https://docs.cloud.google.com/sdk/docs/install-sdk
 # Then authenticate with Application Default Credentials
 gcloud auth application-default login
 ```
