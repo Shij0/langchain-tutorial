@@ -182,7 +182,7 @@ def health_check():
 ```bash
 # Run from the project root directory
 # Note the app.main:app structure
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### **Step 8: Test the API**
