@@ -15,8 +15,8 @@ This single command sets up Application Default Credentials for your local devel
 
 ### Step 2: Install Required Packages
 ```bash
-pip install fastapi uvicorn langchain langchain-google-vertexai
-pip install fastapi uvicorn langchain langchain-google-vertexai langchain-core
+pip install langchain-google-vertexai
+pip install fastapi uvicorn langchain langchain-core
 ```
 
 ### Step 3: Create `main.py` (Complete Code)
