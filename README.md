@@ -77,7 +77,7 @@ Since your code is now inside the `app` folder, you run it using `app.main:app`.
 Run this command in your terminal:
 
 ```bash
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload
 ```
 
 ### ✅ Step 5: Test the API
