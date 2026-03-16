@@ -1,159 +1,193 @@
-# 🚀 Simple FastAPI with LangChain Agent using ADC (Application Default Credentials)
+# 🚀 FastAPI with LangChain Agent: Virtual Environment & Requirements Setup
 
-Here's the **simplest way** to create a FastAPI with LangChain Agent using Vertex AI with ADC authentication.
 
-## 📋 Quick Setup
+## 📁 Updated Project Structure
 
-### Step 1: Install gcloud CLI and Setup ADC
+```
+my-langchain-api/
+├── venv/                    # Virtual environment folder
+├── app/
+│   ├── __init__.py
+│   └── main.py
+└── requirements.txt         # Project dependencies
+```
+
+## 🛠️ Step-by-Step Implementation with Virtual Environment
+
+### **Step 1: Create Project Folder and Virtual Environment**
+
 ```bash
-# Install gcloud CLI (if not already installed)
-# Then authenticate with ADC
+# Create project folder
+mkdir my-langchain-api
+cd my-langchain-api
+
+# Create virtual environment
+# Windows:
+python -m venv venv
+# macOS/Linux:
+python3 -m venv venv
+```
+
+### **Step 2: Activate Virtual Environment**
+
+```bash
+# Windows (Command Prompt):
+venv\Scripts\activate.bat
+
+# Windows (PowerShell):
+venv\Scripts\Activate.ps1
+
+# macOS/Linux:
+source venv/bin/activate
+```
+
+> ⚠️ **Important**: Always activate the virtual environment before installing packages or running your application 【turn0search7】.
+
+### **Step 3: Create requirements.txt File**
+
+Create a `requirements.txt` file in your project root with the following content:
+
+```txt
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+langchain==0.3.14
+langchain-google-vertexai==2.0.8
+langchain-core==0.3.29
+```
+
+<details>
+<summary>🔧 Alternative: Generate requirements.txt automatically</summary>
+
+After installing packages in your virtual environment, you can generate the requirements file:
+
+```bash
+# Generate requirements.txt with exact versions
+pip freeze > requirements.txt
+
+# Or use pipreqs for minimal requirements (only what you import)
+pip install pipreqs
+pipreqs . --force
+```
+
+The `pip freeze` method lists all installed packages with exact versions, while `pipreqs` scans your code to include only necessary dependencies 【turn0search11】.
+
+</details>
+
+### **Step 4: Install Dependencies from requirements.txt**
+
+```bash
+# Install all dependencies at once
+pip install -r requirements.txt
+```
+
+### **Step 5: Setup Google Cloud Authentication (ADC)**
+
+```bash
+# Install gcloud CLI if not already installed
+# Then authenticate with Application Default Credentials
 gcloud auth application-default login
 ```
 
-This single command sets up Application Default Credentials for your local development.
+### **Step 6: Create Application Code**
 
-### Step 2: Install Required Packages
+Create the `app` folder and `main.py` file:
+
 ```bash
-pip install langchain-google-vertexai
-pip install fastapi uvicorn langchain langchain-core
+# Create app directory
+mkdir app
+
+# Create __init__.py (makes it a Python package)
+# Windows:
+type nul > app\__init__.py
+# macOS/Linux:
+touch app/__init__.py
 ```
 
-### Step 3: Create `main.py` (Complete Code)
+Create `app/main.py` with this enhanced code:
+
 ```python
 from fastapi import FastAPI
 from langchain_google_vertexai import ChatVertexAI
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.tools import tool
 from langchain_core.prompts import ChatPromptTemplate
+import os
 
 # Initialize FastAPI
-app = FastAPI(title="Simple LangChain Agent API")
+app = FastAPI(
+    title="LangChain Agent API",
+    description="A simple FastAPI application with LangChain Agent using Vertex AI",
+    version="1.0.0"
+)
 
 # Initialize Vertex AI Model - Uses ADC automatically
 llm = ChatVertexAI(model_name="gemini-1.5-flash")
 
-# Define a simple tool
+# Define tools
 @tool
 def calculate(expression: str) -> str:
     """Calculate mathematical expression"""
     try:
         return str(eval(expression))
-    except:
-        return "Invalid expression"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+@tool
+def get_current_time() -> str:
+    """Get current date and time"""
+    from datetime import datetime
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 # Create agent
-tools = [calculate]
+tools = [calculate, get_current_time]
 prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant."),
+    ("system", "You are a helpful assistant with access to tools."),
     ("human", "{input}"),
     ("placeholder", "{agent_scratchpad}"),
 ])
 agent = create_tool_calling_agent(llm, tools, prompt)
-agent_executor = AgentExecutor(agent=agent, tools=tools)
+agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
 # API Endpoints
 @app.get("/")
 def root():
-    return {"message": "API is running. Use /docs for interactive documentation."}
+    return {
+        "message": "API is running. Use /docs for interactive documentation.",
+        "endpoints": {
+            "docs": "/docs",
+            "ask": "/ask (POST)"
+        }
+    }
 
 @app.post("/ask")
 async def ask_question(question: str):
     """Ask the agent a question"""
-    result = agent_executor.invoke({"input": question})
-    return {"answer": result["output"]}
+    try:
+        result = agent_executor.invoke({"input": question})
+        return {
+            "question": question,
+            "answer": result["output"],
+            "tools_used": result.get("intermediate_steps", [])
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "langchain-agent-api"}
 ```
 
-### Step 4: Run the API
+### **Step 7: Run the Application**
+
 ```bash
-uvicorn main:app --reload
+# Run from the project root directory
+# Note the app.main:app structure
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Step 5: Test the API
+### **Step 8: Test the API**
+
 Visit `http://localhost:8000/docs` and test with:
 - `What is 25 * 4 + 10?`
+- `What time is it now?`
 - `Calculate 100 / 5`
-
-## 🔧 How ADC Works
-
-```mermaid
-flowchart LR
-    A[gcloud auth application-default login] --> B[ADC Credentials]
-    B --> C[LangChain VertexAI]
-    C --> D[FastAPI Application]
-    D --> E[User Request]
-```
-
-## 📊 Comparison: ADC vs Service Account Key
-
-| Method | Setup Difficulty | Security | Best For |
-|--------|-----------------|----------|----------|
-| **ADC** | ![Easy](https://img.shields.io/badge/Difficulty-Easy-green) | ![Secure](https://img.shields.io/badge/Security-High-brightgreen) | Local Development |
-| **Service Account Key** | ![Medium](https://img.shields.io/badge/Difficulty-Medium-yellow) | ![Medium](https://img.shields.io/badge/Security-Medium-yellow) | Production/Containerized |
-
-## ⚙️ Production Considerations
-
-<details>
-<summary>🔧 ADC in Different Environments</summary>
-
-### Local Development
-```bash
-gcloud auth application-default login
-```
-
-### Google Cloud Services (Cloud Run, Cloud Functions, GKE)
-ADC automatically uses the attached service account .
-
-### Other Cloud Providers/On-Premises
-Set `GOOGLE_APPLICATION_CREDENTIALS` environment variable:
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
-```
-
-</details>
-
-## 🚨 Troubleshooting
-
-<details>
-<summary>❓ Common Issues</summary>
-
-### Issue 1: "Could not automatically determine credentials"
-**Solution**: Run `gcloud auth application-default login` 
-
-### Issue 2: Permission denied
-**Solution**: Ensure your account has `Vertex AI User` role :
-```bash
-gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member="user:YOUR_EMAIL" --role="roles/aiplatform.user"
-```
-
-### Issue 3: Model not found
-**Solution**: Verify the Vertex AI API is enabled :
-```bash
-gcloud services enable aiplatform.googleapis.com
-```
-
-</details>
-
-## 🎯 Key Benefits of ADC
-
-1. **No Service Account Management**: Uses your personal credentials
-2. **Automatic Rotation**: No need to rotate keys
-3. **Simplified Setup**: One command vs. file management
-4. **Better Security**: No sensitive files in your project
-
-## 📈 Next Steps
-
-1. **Add More Tools**: Integrate with external APIs
-2. **Add Memory**: Implement conversation history
-3. **Deploy**: Use Cloud Run for production
-
-## 🔗 Additional Resources
-
-| Resource | Description |
-|----------|-------------|
-| [ADC Documentation](https://cloud.google.com/docs/authentication/provide-credentials-adc)  | Official ADC setup guide |
-| [Vertex AI Authentication](https://cloud.google.com/vertex-ai/docs/authentication)  | Vertex AI auth methods |
-| [LangChain Vertex AI Integration](https://docs.langchain.com/oss/python/integrations/llms/google_vertex_ai) | LangChain documentation |
-
-This approach uses **ADC (Application Default Credentials)** which is simpler and more secure than managing service account keys for local development .
